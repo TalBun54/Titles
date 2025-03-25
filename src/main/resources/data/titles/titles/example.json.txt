@@ -5,7 +5,7 @@
   // "story", with a title json also called "mine_stone". You can find further examples in this mod's data folder, or
   // the source code available here: https://github.com/Aurilux/Titles/tree/master/src/main/resources/data/titles/titles;
 
-  // This value determines how the title can be unlocked. There are three options:
+  // This value determines how the title can be unlocked. There are four options:
   // "advancement": The title will automatically be unlocked when the player completes the associated advancement.
   // "loot": The title can only be obtained by purchasing it from villagers or defeating Titled mobs
   // "command": The title can only be unlocked using the "/titles add" command. Good for quest mods or other rewards.

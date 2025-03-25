@@ -24,72 +24,38 @@ public class CommandAddRemoveType {
         removetype
     }
 
-    private enum CommandScope {
-        all,
-        only,
-        except,
-    }
-
     public static ArgumentBuilder<CommandSourceStack, ?> register() {
-        return Commands.argument("command", EnumArgument.enumArgument(CommandType.class))
-                .requires(s -> s.hasPermission(2))
+        return Commands.argument("commandtype", EnumArgument.enumArgument(CommandType.class))
+                .requires(s -> s.hasPermission(0))
                 .then(Commands.argument("player", EntityArgument.player())
-                        .then(Commands.argument("scope", EnumArgument.enumArgument(CommandScope.class)))
+                        .then(Commands.argument("awards", EnumArgument.enumArgument(Title.AwardType.class))
                         .executes(ctx -> run(ctx,
-                                ctx.getArgument("command", CommandType.class),
+                                ctx.getArgument("commandtype", CommandType.class),
                                 EntityArgument.getPlayer(ctx, "player"),
-                                ctx.getArgument("scope", CommandScope.class)))
-                                .then(Commands.argument("awards", EnumArgument.enumArgument(Title.AwardType.class))
-                                        .executes(ctx -> run(ctx,
-                                                ctx.getArgument("command", CommandType.class),
-                                                EntityArgument.getPlayer(ctx, "player"),
-                                                ctx.getArgument("scope", CommandScope.class),
-                                                ctx.getArgument("awards", Title.AwardType.class)))));
+                                ctx.getArgument("awards", Title.AwardType.class)))));
     }
 
-    private static int run(CommandContext<CommandSourceStack> ctx, CommandType command, ServerPlayer player, CommandScope scope, Title.AwardType... awards) {
-        if (Arrays.asList(awards).contains(Title.AwardType.STARTING) || Arrays.asList(awards).contains(Title.AwardType.CONTRIBUTOR)) {
-            ctx.getSource().sendFailure(Component.translatable("commands.titles.addremovetype.invalid_awards", scope.name(), player.getName()));
+    private static int run(CommandContext<CommandSourceStack> ctx, CommandType command, ServerPlayer player, Title.AwardType award) {
+        if (award.equals(Title.AwardType.STARTING) || award.equals(Title.AwardType.CONTRIBUTOR)) {
+            ctx.getSource().sendFailure(Component.translatable("commands.titles.addremovetype.invalid_awards", player.getName()));
             return Command.SINGLE_SUCCESS;
         }
 
         // This is an array as a workaround of variables needing to be final when accessed inside a lambda.
         final MutableComponent[] response = {Component.translatable("commands.titles.addremovetype.fail")};
         TitleManager.doIfPresent(player, cap -> {
-            if (command == CommandType.addtype) {
-                List<Title> titlesToAdd = new ArrayList<>();
-                if (scope == CommandScope.all) {
-                    titlesToAdd.addAll(TitleManager.getAllObtainableTitles().values());
-                }
-                else if(scope == CommandScope.only) {
-                    titlesToAdd.addAll(TitleManager.getTitlesOfType(awards).values());
-                }
-                else { //scope == CommandScope.except
-                    titlesToAdd.addAll(TitleManager.getAllTitlesExcept(awards).values());
-                }
-                titlesToAdd.forEach(title -> {
-                    TitlesMod.LOG.debug("Adding title {}", title);
+            TitleManager.getTitlesOfType(award).values().forEach(title -> {
+                if (command == CommandType.addtype) {
+                    TitlesMod.LOG.debug("Adding title type {}", award);
                     cap.add(TitleManager.getTitle(title.getID()));
-                });
-                response[0] = Component.translatable("commands.titles.addtype", scope.name(), player.getName());
-            }
-            else { //command == CommandType.removetype
-                List<Title> titlesToRemove = new ArrayList<>();
-                if (scope == CommandScope.all) {
-                    titlesToRemove.addAll(TitleManager.getAllObtainableTitles().values());
+                    response[0] = Component.translatable("commands.titles.addtype", award.toString(), player.getName());
                 }
-                else if(scope == CommandScope.only) {
-                    titlesToRemove.addAll(TitleManager.getTitlesOfType(awards).values());
-                }
-                else { //scope == CommandScope.except
-                    titlesToRemove.addAll(TitleManager.getAllTitlesExcept(awards).values());
-                }
-                titlesToRemove.forEach(title -> {
-                    TitlesMod.LOG.debug("Removing title {}", title);
+                else { //command == CommandType.removetype
+                    TitlesMod.LOG.debug("Removing title type {}", award);
                     cap.remove(TitleManager.getTitle(title.getID()));
-                });
-                response[0] = Component.translatable("commands.titles.removetype", scope.name(), player.getName());
-            }
+                    response[0] = Component.translatable("commands.titles.removetype", award.toString(), player.getName());
+                }
+            });
             TitlesNetwork.toPlayer(new PacketSyncTitlesCapability(cap.serializeNBT()), player);
         });
         ctx.getSource().sendSuccess(() -> response[0], true);
